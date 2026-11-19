@@ -1,0 +1,40 @@
+name: CS336 CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_suite:
+        description: Run all assignment tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Python 3.12 tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - name: Verify test collection
+        run: uv run --locked pytest --collect-only -q
+      - name: Test attention and softmax
+        if: ${{ !inputs.full_suite }}
+        run: |
+          uv run --locked pytest -q \
+            tests/test_model.py::test_scaled_dot_product_attention \
+            tests/test_model.py::test_4d_scaled_dot_product_attention \
+            tests/test_nn_utils.py::test_softmax_matches_pytorch
+      - name: Run the full assignment suite
+        if: ${{ inputs.full_suite }}
+        run: uv run --locked pytest -q
